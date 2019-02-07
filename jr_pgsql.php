@@ -36,7 +36,7 @@ cid         name        type        notnull     dflt_value  pk
 
 
 
- function sq_get_schema() {
+ function sg_get_schema() {   //DO UZUPELNIENIA
  //pobiera liste tabel
  /**
      [35] => Array
@@ -64,8 +64,8 @@ lm] VARCHAR, [alu_vc] VARCHAR, [alu_loc] VARCHAR, [raw] VARCHAR)
 
 
  
- function sq_get_table($table) {
- // podbiera list� p�l tabeli
+ function sq_get_table($table) { //DO UZUPELNIENIA
+ // podbiera liste pol tabeli
  /**
  
    [13] => Array
@@ -94,7 +94,7 @@ lm] VARCHAR, [alu_vc] VARCHAR, [alu_loc] VARCHAR, [raw] VARCHAR)
  function sq_Quote($Str) // Double-quoting only
     {
     global $db;
-    $Str=$db->escapeString($Str);
+    $Str=pg_escape_string ($db,$Str);
     //$Str=str_replace('"','\"',$Str);
     return "'".$Str."'";
     } // Quote
@@ -102,13 +102,13 @@ lm] VARCHAR, [alu_vc] VARCHAR, [alu_loc] VARCHAR, [raw] VARCHAR)
   function sq_Quote_Array($arr) // Double-quoting only
     {
 		global $db;
-    	foreach ($arr as $a1=>$a2) $arr[$a1]="'".$db->escapeString(trim($a2))."'";
+    	foreach ($arr as $a1=>$a2) $arr[$a1]="'".sq_Quote(trim($a2))."'";
 			return $arr;
     } // Quote
  
  function sq_last() {
 	 global $db;
-	 return $db->lastInsertRowID();
+	 return pg_last_oid ($db);
  }
  
 
@@ -144,7 +144,11 @@ lm] VARCHAR, [alu_vc] VARCHAR, [alu_loc] VARCHAR, [raw] VARCHAR)
 		print "DB:".__LINE__.":$query\n";
 		//die();
 	}
-	$rs= $db->query($query);
+	$rs = pg_query($db, $query);
+  if (!$rs) {
+    die ("An error occurred.\n");
+    exit;
+  }
 	if ($rs===TRUE || $rs===FALSE) return array();
 	$a=sq_table($rs,$as);
 	if ($key!==false) {
@@ -158,7 +162,7 @@ lm] VARCHAR, [alu_vc] VARCHAR, [alu_loc] VARCHAR, [raw] VARCHAR)
 	return $a;
  }
  
- function sq_table($rs,$as=SQLITE3_ASSOC) {
+ function sq_table($rs,$as=1) {
  /*
  SQLITE3_ASSOC: returns an array indexed by column name as returned in the corresponding result set
  SQLITE3_NUM: returns an array indexed by column number as returned in the corresponding result set, starting at column 0
@@ -166,39 +170,12 @@ lm] VARCHAR, [alu_vc] VARCHAR, [alu_loc] VARCHAR, [raw] VARCHAR)
  */
  
   $a=array();
-  while ($row = $rs->fetchArray($as)) {
+  while ($row = pg_fetch_assoc($rs)) {
     $a[]=$row;
   }
   return $a;
  }
  
- function fetchObject($sqlite3result, $objectType = NULL) { 
-    $array = $sqlite3result->fetchArray(); 
-
-    if(is_null($objectType)) { 
-        $object = new stdClass(); 
-    } else { 
-        // does not call this class' constructor 
-        $object = unserialize(sprintf('O:%d:"%s":0:{}', strlen($objectType), $objectType)); 
-    } 
-    
-    $reflector = new ReflectionObject($object); 
-    for($i = 0; $i < $sqlite3result->numColumns(); $i++) { 
-        $name = $sqlite3result->columnName($i); 
-        $value = $array[$name]; 
-        
-        try { 
-            $attribute = $reflector->getProperty($name); 
-            
-            $attribute->setAccessible(TRUE); 
-            $attribute->setValue($object, $value); 
-        } catch (ReflectionException $e) { 
-            $object->$name = $value; 
-        } 
-    } 
-    
-    return $object; 
-}
 
 
  function jr_table($tab,$show_var_name=1,$show_line_num=1,$header="",$footer=""){
